@@ -16,49 +16,6 @@ Adafruit_BMP280::Adafruit_BMP280(TwoWire *theWire) {
 }
 
 /*!
- * @brief  BMP280 constructor using hardware SPI
- * @param  cspin
- *         cs pin number
- * @param  theSPI
- *         optional SPI object
- */
-Adafruit_BMP280::Adafruit_BMP280(int8_t cspin, SPIClass *theSPI) {
-  spi_dev = new Adafruit_SPIDevice(cspin, 1000000, SPI_BITORDER_MSBFIRST,
-                                   SPI_MODE0, theSPI);
-  temp_sensor = new Adafruit_BMP280_Temp(this);
-  pressure_sensor = new Adafruit_BMP280_Pressure(this);
-}
-
-/*!
- * @brief  BMP280 constructor using bitbang SPI
- * @param  cspin
- *         The pin to use for CS/SSEL.
- * @param  mosipin
- *         The pin to use for MOSI.
- * @param  misopin
- *         The pin to use for MISO.
- * @param  sckpin
- *         The pin to use for SCK.
- */
-Adafruit_BMP280::Adafruit_BMP280(int8_t cspin, int8_t mosipin, int8_t misopin,
-                                 int8_t sckpin) {
-  spi_dev = new Adafruit_SPIDevice(cspin, sckpin, misopin, mosipin);
-  temp_sensor = new Adafruit_BMP280_Temp(this);
-  pressure_sensor = new Adafruit_BMP280_Pressure(this);
-}
-
-Adafruit_BMP280::~Adafruit_BMP280(void) {
-  if (spi_dev)
-    delete spi_dev;
-  if (i2c_dev)
-    delete i2c_dev;
-  if (temp_sensor)
-    delete temp_sensor;
-  if (pressure_sensor)
-    delete pressure_sensor;
-}
-
-/*!
  *  Initialises the sensor.
  *  @param addr
  *         The I2C address to use (default = 0x77)
@@ -73,10 +30,6 @@ bool Adafruit_BMP280::begin(uint8_t addr, uint8_t chipid) {
       delete i2c_dev;
     i2c_dev = new Adafruit_I2CDevice(addr, _wire);
     if (!i2c_dev->begin())
-      return false;
-  } else {
-    // SPI mode
-    if (!spi_dev->begin())
       return false;
   }
 
@@ -131,13 +84,8 @@ void Adafruit_BMP280::setSampling(sensor_mode mode,
 void Adafruit_BMP280::write8(byte reg, byte value) {
   byte buffer[2];
   buffer[1] = value;
-  if (i2c_dev) {
-    buffer[0] = reg;
-    i2c_dev->write(buffer, 2);
-  } else {
-    buffer[0] = reg & ~0x80;
-    spi_dev->write(buffer, 2);
-  }
+  buffer[0] = reg;
+  i2c_dev->write(buffer, 2);
 }
 
 /*!
@@ -148,13 +96,8 @@ void Adafruit_BMP280::write8(byte reg, byte value) {
  */
 uint8_t Adafruit_BMP280::read8(byte reg) {
   uint8_t buffer[1];
-  if (i2c_dev) {
-    buffer[0] = uint8_t(reg);
-    i2c_dev->write_then_read(buffer, 1, buffer, 1);
-  } else {
-    buffer[0] = uint8_t(reg | 0x80);
-    spi_dev->write_then_read(buffer, 1, buffer, 1);
-  }
+  buffer[0] = uint8_t(reg);
+  i2c_dev->write_then_read(buffer, 1, buffer, 1);
   return buffer[0];
 }
 
@@ -163,14 +106,8 @@ uint8_t Adafruit_BMP280::read8(byte reg) {
  */
 uint16_t Adafruit_BMP280::read16(byte reg) {
   uint8_t buffer[2];
-
-  if (i2c_dev) {
     buffer[0] = uint8_t(reg);
     i2c_dev->write_then_read(buffer, 1, buffer, 2);
-  } else {
-    buffer[0] = uint8_t(reg | 0x80);
-    spi_dev->write_then_read(buffer, 1, buffer, 2);
-  }
   return uint16_t(buffer[0]) << 8 | uint16_t(buffer[1]);
 }
 
@@ -193,14 +130,8 @@ int16_t Adafruit_BMP280::readS16_LE(byte reg) {
  */
 uint32_t Adafruit_BMP280::read24(byte reg) {
   uint8_t buffer[3];
-
-  if (i2c_dev) {
     buffer[0] = uint8_t(reg);
     i2c_dev->write_then_read(buffer, 1, buffer, 3);
-  } else {
-    buffer[0] = uint8_t(reg | 0x80);
-    spi_dev->write_then_read(buffer, 1, buffer, 3);
-  }
   return uint32_t(buffer[0]) << 16 | uint32_t(buffer[1]) << 8 |
          uint32_t(buffer[2]);
 }
